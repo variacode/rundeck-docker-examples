@@ -1,0 +1,52 @@
+version: '3'
+services:
+  rundeck:
+    build:
+      context: .
+      args:
+        IMAGE: '${RUNDECK_IMAGE:-rundeck/rundeck:SNAPSHOT}'
+    container_name: rundeck-demo
+    command: "-Dserver.https.port=4443 -Drundeck.ssl.config=/home/rundeck/server/config/ssl.properties"
+    ports:
+    - 4447:4443
+    environment:
+      RUNDECK_GRAILS_URL: 'https://localhost:4447'
+      #DATABASE CONNECTIO
+      RUNDECK_DATABASE_DRIVER: com.mysql.jdbc.Driver
+      RUNDECK_DATABASE_USERNAME: rundeck
+      RUNDECK_DATABASE_PASSWORD: ${DB_PASSWORD}
+      RUNDECK_DATABASE_URL: 'jdbc:mysql://mysql/rundeck?autoReconnect=true&useSSL=false'
+      #LOG STORAGE
+      RUNDECK_PLUGIN_EXECUTIONFILESTORAGE_NAME: org.rundeck.amazon-s3
+      RUNDECK_PLUGIN_EXECUTIONFILESTORAGE_S3_ENDPOINT: http://minio:9000/
+      RUNDECK_PLUGIN_EXECUTIONFILESTORAGE_S3_BUCKET: rundeck
+      RUNDECK_PLUGIN_EXECUTIONFILESTORAGE_S3_REGION: us-east-2
+      RUNDECK_PLUGIN_EXECUTIONFILESTORAGE_S3_PATHSTYLE: "true"
+      AWS_ACCESS_KEY_ID: ${STORAGE_ACCESS_KEY_ID}
+      AWS_SECRET_KEY: ${STORAGE_SECRET_KEY}
+    volumes:
+      - ./data/realm.properties:/home/rundeck/server/config/realm.properties
+  mysql:
+    image: mysql:5.7
+    container_name: rundeck-mysql
+    ports:
+      - 33060:3306
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_PASSWORD}
+      - MYSQL_DATABASE=rundeck
+      - MYSQL_USER=rundeck
+      - MYSQL_PASSWORD=${DB_PASSWORD}
+    volumes:
+      - ./data/database:/var/lib/mysql
+  minio:
+    image: minio/minio:latest
+    container_name: rundeck-minio
+    ports:
+      - 9000:9000
+    entrypoint: sh
+    command: -c 'mkdir -p /export/rundeck && mkdir -p /export/plugins && /usr/bin/minio server /export --compat'
+    environment:
+          MINIO_ACCESS_KEY: ${STORAGE_ACCESS_KEY_ID}
+          MINIO_SECRET_KEY: ${STORAGE_SECRET_KEY}
+    volumes:
+      - ./data/storage:/export

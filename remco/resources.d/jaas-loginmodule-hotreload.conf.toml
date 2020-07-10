@@ -1,0 +1,4 @@
+[[template]]
+    src         = "${REMCO_TEMPLATE_DIR}/jaas-loginmodule-hotreload.conf"
+    dst         = "/home/rundeck/server/config/jaas-loginmodule-reloaded.conf"
+    mode        = "0664"
